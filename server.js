@@ -13,6 +13,7 @@ let currPlayerValue;
 
 // move status --> Valid or Invalid
 let moveStatus;
+let gameStatus;
 
 // yellow represents = 0
 // red represents = 1
@@ -235,7 +236,7 @@ app.get('/start', (req, res, next) => {
 });
 
 // move api
-app.get('/:move', (req, res) => {
+app.get('/:move', (req, res, next) => {
     try {
         const move = Number(req.params.move);
         const isValidMove = validateMove(gameBoard, move);
@@ -243,7 +244,7 @@ app.get('/:move', (req, res) => {
             moveStatus = "Invalid";
             displayBoard(gameBoard);
             console.log(`${moveStatus} Move: Now, ${currPlayer} turn`);
-            res.status(422).send(`${moveStatus}`);
+            next();
         } else {
             moveStatus = "Valid";
             pushColorToGameBoard(gameBoard, move, currPlayerValue);
@@ -251,12 +252,12 @@ app.get('/:move', (req, res) => {
             const winner = checkWinning(gameBoard);
             console.log("Winner: " + winner);
             if (winner != "None") {
+                gameStatus = "Win";
                 resetGame();
-                res.status(200).send(`${currPlayer} wins`);
             } else {
                 if (checkDraw(gameBoard)) {
+                    gameStatus = "Draw";
                     console.log(`${moveStatus} Move: Draw: Game Over`);
-                    res.status(200).send("Draw: Game Over");
                 } else {
                     if (currPlayer == "Yellow") {
                         currPlayer = "Red";
@@ -266,13 +267,24 @@ app.get('/:move', (req, res) => {
                         currPlayerValue = 0
                     }
                     console.log(`${moveStatus} Move: Now, ${currPlayer} turn`);
-                    res.status(200).send(`${moveStatus}`);
                 }
 
             }
         }
+        next();
     } catch (e) {
         res.status(400).send("Something went wrong, Please start the game and then make a move. To start the game go to: ' / ' ");
+    }
+}, (req, res) => {
+    if (moveStatus == "Invalid") {
+        res.status(422).send(`${moveStatus}`);
+    } else if (gameStatus == "Draw") {
+        res.status(200).send("Draw: Game Over");
+    }
+    else if (gameStatus == "Win") {
+        res.status(200).send(`${currPlayer} wins`);
+    } else {
+        res.status(200).send(`${moveStatus}`);
     }
 });
 
